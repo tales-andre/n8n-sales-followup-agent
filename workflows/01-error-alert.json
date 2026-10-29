@@ -1,0 +1,174 @@
+{
+  "id": "wfErrorAlert0001",
+  "name": "Sales follow-up: error alert",
+  "active": true,
+  "nodes": [
+    {
+      "id": "94b9de90-55f7-5486-8f46-eb7af90849b3",
+      "name": "Note: what this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -260
+      ],
+      "parameters": {
+        "content": "## If anything breaks, someone gets an email\nAny failure in the other two workflows (database down, AI key rejected, mail server down) lands here.\nThe alert says **which workflow, which step, what the error was** and links to the failed run.",
+        "height": 200,
+        "width": 640,
+        "color": 4
+      }
+    },
+    {
+      "id": "7bacf8ed-cfe7-5d51-a4a5-2dc57cf640f9",
+      "name": "When another workflow fails",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "37003770-f27c-5905-b987-4e1720781c4a",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "065f00b0-6e61-56a2-98f4-3232a66aae15",
+              "name": "companyName",
+              "value": "={{ $env.COMPANY_NAME || 'Cedar Ridge Supply Co.' }}",
+              "type": "string"
+            },
+            {
+              "id": "494114c0-af7b-51fc-92f6-67b3a00f6cc5",
+              "name": "fromEmail",
+              "value": "={{ $env.SALES_FROM_EMAIL || 'sales@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "b58c5ca4-a80f-588e-b6ee-ae04bd1c0a99",
+              "name": "managerEmail",
+              "value": "={{ $env.SALES_MANAGER_EMAIL || 'manager@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "3389688f-7ada-59e7-bd3e-1c1982a18fd9",
+              "name": "alertEmail",
+              "value": "={{ $env.ALERT_EMAIL || 'alerts@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "ad1a5b21-aeb3-5647-a263-32b2dd130d5b",
+              "name": "baseUrl",
+              "value": "={{ ($env.N8N_WEBHOOK_URL || $env.WEBHOOK_URL || 'http://localhost:5678/').replace(/\\/+$/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "a28b3f7e-a49c-570b-bb31-3b9c700ecb12",
+              "name": "mailProvider",
+              "value": "={{ ($env.MAIL_PROVIDER || 'smtp').toLowerCase() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "b238edfa-a6ee-52dc-895a-5c9dd900870f",
+      "name": "Write the alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const ev = $('When another workflow fails').first().json;\nconst s = $('Settings').first().json;\nconst exec = ev.execution || {};\nconst trig = ev.trigger || {};\nconst err = exec.error || trig.error || {};\nconst workflow = (ev.workflow && ev.workflow.name) || 'unknown workflow';\nconst step = exec.lastNodeExecuted || (err.node && err.node.name) || 'unknown step';\nconst message = err.message || 'no error message';\nconst description = err.description || '';\nconst lines = [\n  'A sales follow-up workflow stopped with an error. Nothing was sent by the failed step.',\n  '',\n  'Workflow:   ' + workflow,\n  'Step:       ' + step,\n  'Error:      ' + message,\n  description ? 'Details:    ' + description : null,\n  'When:       ' + new Date().toISOString(),\n  exec.url ? 'Failed run: ' + exec.url : null,\n  '',\n  'What to do: open the failed run, fix the cause (for example a database that is down,',\n  'an expired API key or a mail server that refuses the connection), then run it again.',\n  'Drafts that were not finished are picked up again on the next daily run.',\n].filter(l => l !== null);\nreturn [{ json: { to: s.alertEmail, subject: '[ALERT] ' + workflow + ' failed at \"' + step + '\"', text: lines.join('\\n') } }];\n"
+      }
+    },
+    {
+      "id": "b95cc089-c308-5927-adbc-7bc217e57a4b",
+      "name": "Email the alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "fromEmail": "={{ $('Settings').first().json.fromEmail }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "options": {
+          "appendAttribution": false
+        },
+        "emailFormat": "text",
+        "text": "={{ $json.text }}"
+      },
+      "credentials": {
+        "smtp": {
+          "id": "smtpDemoMail0001",
+          "name": "Demo mailbox (Mailpit SMTP)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When another workflow fails": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Write the alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the alert": {
+      "main": [
+        [
+          {
+            "node": "Email the alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "versionId": "59bbe9b3-ad9a-59ef-b49a-b87df5a12069",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

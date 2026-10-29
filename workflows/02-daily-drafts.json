@@ -1,0 +1,670 @@
+{
+  "id": "wfDailyDrafts001",
+  "name": "Sales follow-up: daily drafts",
+  "active": true,
+  "nodes": [
+    {
+      "id": "c59a013d-f9b0-55e2-87e5-2cb1e8e72ebd",
+      "name": "Note: step 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "content": "## 1. Every weekday morning\nFinds customers who have not ordered for a while and new prospects worth a first email.\nEach account is reserved **once per quiet period**, so running twice never drafts twice.",
+        "height": 230,
+        "width": 700,
+        "color": 7
+      }
+    },
+    {
+      "id": "15c998c6-2a10-5117-849b-31a3619cf168",
+      "name": "Note: step 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        700,
+        -300
+      ],
+      "parameters": {
+        "content": "## 2. Draft each email\nDemo: an **offline template** (no AI, no API key).\nReal use: set LLM_PROVIDER to openai, anthropic or ollama and the AI writes the draft.\nIf the AI call fails, that account is marked and an alert email names it.",
+        "height": 230,
+        "width": 940,
+        "color": 7
+      }
+    },
+    {
+      "id": "2b06db73-8818-5500-9805-8713a360ba39",
+      "name": "Note: step 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        -300
+      ],
+      "parameters": {
+        "content": "## 3. Nothing is sent here\nDrafts wait in the approval queue.\nThe sales manager gets one email with a link to review them.",
+        "height": 230,
+        "width": 520,
+        "color": 5
+      }
+    },
+    {
+      "id": "54506283-eedd-5eb8-898e-006d395a2cbb",
+      "name": "Every weekday at 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5f5e43f9-39e6-5f98-afe4-a8aabb26e8c2",
+      "name": "Run now (demo button)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "run-followups",
+        "responseMode": "lastNode",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "webhookId": "441655e8-6f10-5754-a3de-3967d2276a0f"
+    },
+    {
+      "id": "945099be-233a-5500-855c-34e6955dd814",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        100
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "065f00b0-6e61-56a2-98f4-3232a66aae15",
+              "name": "companyName",
+              "value": "={{ $env.COMPANY_NAME || 'Cedar Ridge Supply Co.' }}",
+              "type": "string"
+            },
+            {
+              "id": "494114c0-af7b-51fc-92f6-67b3a00f6cc5",
+              "name": "fromEmail",
+              "value": "={{ $env.SALES_FROM_EMAIL || 'sales@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "b58c5ca4-a80f-588e-b6ee-ae04bd1c0a99",
+              "name": "managerEmail",
+              "value": "={{ $env.SALES_MANAGER_EMAIL || 'manager@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "3389688f-7ada-59e7-bd3e-1c1982a18fd9",
+              "name": "alertEmail",
+              "value": "={{ $env.ALERT_EMAIL || 'alerts@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "ad1a5b21-aeb3-5647-a263-32b2dd130d5b",
+              "name": "baseUrl",
+              "value": "={{ ($env.N8N_WEBHOOK_URL || $env.WEBHOOK_URL || 'http://localhost:5678/').replace(/\\/+$/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "a28b3f7e-a49c-570b-bb31-3b9c700ecb12",
+              "name": "mailProvider",
+              "value": "={{ ($env.MAIL_PROVIDER || 'smtp').toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "d4dd191d-023e-575c-ba08-865358e1623e",
+              "name": "inactiveDays",
+              "value": "={{ Number($env.INACTIVE_DAYS || 60) }}",
+              "type": "number"
+            },
+            {
+              "id": "aeac0e90-bfef-59c1-a3f8-c172b53dd035",
+              "name": "prospectsPerDay",
+              "value": "={{ Number($env.PROSPECTS_PER_DAY || 3) }}",
+              "type": "number"
+            },
+            {
+              "id": "83134755-efda-5954-9e37-4839692a1069",
+              "name": "llmProvider",
+              "value": "={{ ($env.LLM_PROVIDER || 'stub').toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "2bf6df4e-31d4-57c5-afda-959a107b3b01",
+              "name": "llmModel",
+              "value": "={{ $env.LLM_MODEL || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "09f5204f-c2f5-55da-b09b-e553ac27015f",
+              "name": "llmBaseUrl",
+              "value": "={{ ($env.LLM_BASE_URL || '').replace(/\\/+$/, '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "358026e8-ab50-526b-8f3f-b7f968cdc956",
+      "name": "Find quiet customers and new prospects",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        100
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM reserve_followups($1, $2);",
+        "options": {
+          "queryReplacement": "={{ [ $json.inactiveDays, $json.prospectsPerDay ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "pgSalesDb0000001",
+          "name": "Sales database (Postgres)"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "384b33a3-2544-5172-b121-fd343646a864",
+      "name": "Anyone new to contact?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "de22795f-51fa-5f8f-bacc-bfbd6dbded71",
+              "leftValue": "={{ $json.followup_id }}",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "2cda0984-65b8-573a-8334-e843956772b2",
+      "name": "Nothing new today",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "30198d14-5db2-5880-ac33-925ebd2d7c48",
+      "name": "Use AI or the offline template?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d7c5c7cf-d4f3-5be0-96b8-c0d17984ca09",
+              "leftValue": "={{ $('Settings').first().json.llmProvider }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "stub"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "17921c00-5fe6-50b6-96db-7e597dd64d27",
+      "name": "Draft email (OFFLINE TEMPLATE, no AI)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// OFFLINE TEMPLATE - no AI, no API key. Deterministic, so the demo and the tests\n// always produce the same drafts. Set LLM_PROVIDER to use a real model instead.\nconst s = $('Settings').first().json;\nconst a = $json;\nconst first = String(a.contact_name || '').split(' ')[0] || 'there';\nconst hints = {\n  'Restaurant': 'take-out containers, napkins and cleaning supplies',\n  'Cafe & bakery': 'cups, lids and bakery boxes',\n  'Healthcare office': 'gloves, wipes and paper goods',\n  'Property management': 'trash liners, paper towels and floor care',\n  'Gym & fitness': 'paper towels, sanitizer and trash liners',\n};\nlet subject, body;\nif (a.kind === 'reconnect') {\n  const last = new Date(a.last_order_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });\n  subject = 'Checking in on your ' + a.last_product + ' order';\n  body = [\n    'Hi ' + first + ',',\n    '',\n    'Your last order with us was on ' + last + ', so I wanted to check in. Are you still stocked up on ' + a.last_product + ', or is there anything we could do better on price, delivery days or product mix?',\n    '',\n    'If it helps, I can send a quick quote for your usual order, or samples of anything new you want to try.',\n    '',\n    'Just reply to this email and I will take care of it.',\n    '',\n    'Best regards,',\n    a.sales_rep,\n    s.companyName,\n  ].join('\\n');\n} else {\n  const hint = hints[a.segment] || 'everyday supplies';\n  subject = 'Wholesale supplies for ' + a.company;\n  body = [\n    'Hi ' + first + ',',\n    '',\n    'I am ' + a.sales_rep + ' with ' + s.companyName + '. We supply ' + hint + ' to ' + String(a.segment).toLowerCase() + ' businesses around ' + a.city + ', with regular delivery days and no minimum contract.',\n    '',\n    'Would a short price list for the items you use most be useful? If you tell me what you order today, I can put together a side-by-side quote.',\n    '',\n    'Best regards,',\n    a.sales_rep,\n    s.companyName,\n  ].join('\\n');\n}\nreturn { json: { followup_id: a.followup_id, subject, body, drafted_by: 'offline template (no AI)' } };\n",
+        "mode": "runOnceForEachItem"
+      }
+    },
+    {
+      "id": "6075f13a-167f-59c8-b07c-cb1de34905d1",
+      "name": "Build AI request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        100
+      ],
+      "parameters": {
+        "jsCode": "// Builds the request for the configured AI provider. The API key is NOT read here:\n// it is added as a header in the next step, so it never lands in the saved run data.\nconst s = $('Settings').first().json;\nconst a = $json;\nconst system = [\n  'You write short, friendly B2B sales emails for ' + s.companyName + ', a wholesale distributor.',\n  'Plain text, under 120 words, signed by the sales rep named in the facts.',\n  'Never invent prices, discounts, deadlines or facts that are not in the input.',\n  'Answer with JSON only: {\"subject\": \"...\", \"body\": \"...\"}',\n].join(' ');\nconst facts = {\n  email_type: a.kind === 'reconnect' ? 'reconnect with a customer who stopped ordering' : 'first email to a new wholesale prospect',\n  company: a.company, contact_name: a.contact_name, segment: a.segment, city: a.city,\n  sales_rep: a.sales_rep, last_order_date: a.last_order_date, days_since_last_order: a.days_quiet,\n  last_product: a.last_product, why_this_prospect: a.fit_reason, internal_notes: a.notes,\n};\nconst user = 'Write the email. Facts:\\n' + JSON.stringify(facts, null, 2);\nconst p = s.llmProvider;\nlet url, body;\nif (p === 'anthropic') {\n  url = (s.llmBaseUrl || 'https://api.anthropic.com') + '/v1/messages';\n  body = { model: s.llmModel || 'claude-opus-5', max_tokens: 4000, output_config: { effort: 'low' },\n           fallbacks: 'default', system, messages: [{ role: 'user', content: user }] };\n} else if (p === 'ollama') {\n  if (!s.llmModel) throw new Error('LLM_MODEL is required for ollama');\n  url = (s.llmBaseUrl || 'http://host.docker.internal:11434') + '/api/chat';\n  body = { model: s.llmModel, stream: false, format: 'json',\n           messages: [{ role: 'system', content: system }, { role: 'user', content: user }] };\n} else if (p === 'openai') {\n  if (!s.llmModel) throw new Error('LLM_MODEL is required for openai');\n  url = (s.llmBaseUrl || 'https://api.openai.com/v1') + '/chat/completions';\n  body = { model: s.llmModel, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] };\n} else {\n  throw new Error('Unknown LLM_PROVIDER \"' + p + '\". Use stub, openai, anthropic or ollama.');\n}\nreturn { json: { followup_id: a.followup_id, company: a.company, llm: { provider: p, url, body } } };\n",
+        "mode": "runOnceForEachItem"
+      }
+    },
+    {
+      "id": "07e17256-8e1e-55e4-abfa-ec7dc852b913",
+      "name": "Ask the AI to draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.llm.url }}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ JSON.stringify($json.llm.provider === 'anthropic' ? { 'x-api-key': $env.LLM_API_KEY || '', 'anthropic-version': '2023-06-01', 'anthropic-beta': 'server-side-fallback-2026-07-01' } : ($json.llm.provider === 'ollama' ? {} : { 'Authorization': 'Bearer ' + ($env.LLM_API_KEY || '') })) }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.llm.body) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "5e5d8a99-c55a-587a-b3b4-ae379a827dce",
+      "name": "Read the AI reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Reads the AI answer for any supported provider and checks it is usable.\nconst req = $('Build AI request').item.json;\nconst r = $json;\nlet text = '';\nif (req.llm.provider === 'anthropic') {\n  if (r.stop_reason === 'refusal') throw new Error('The model declined to write this email');\n  text = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');\n} else if (req.llm.provider === 'ollama') {\n  text = (r.message && r.message.content) || '';\n} else {\n  text = (((r.choices || [])[0] || {}).message || {}).content || '';\n}\nconst start = text.indexOf('{'), end = text.lastIndexOf('}');\nif (start < 0 || end < start) throw new Error('The AI reply had no JSON: ' + text.slice(0, 200));\nconst out = JSON.parse(text.slice(start, end + 1));\nif (!out.subject || !out.body) throw new Error('The AI reply is missing subject or body');\nreturn { json: { followup_id: req.followup_id, subject: String(out.subject).trim(), body: String(out.body).trim(),\n                 drafted_by: req.llm.provider + ':' + (req.llm.body.model || '') } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "1fc4452c-f6a8-550d-94dd-969f8b62a6fc",
+      "name": "Save draft for approval",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        -100
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM save_draft($1, $2, $3, $4);",
+        "options": {
+          "queryReplacement": "={{ [ $json.followup_id, $json.subject, $json.body, $json.drafted_by ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "pgSalesDb0000001",
+          "name": "Sales database (Postgres)"
+        }
+      }
+    },
+    {
+      "id": "69987afc-eb53-5a49-a24d-396924af8069",
+      "name": "Write the morning summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "const s = $('Settings').first().json;\nconst found = $('Find quiet customers and new prospects').all().map(i => i.json);\nconst saved = new Set($input.all().map(i => i.json.followup_id));\nconst rows = found.filter(f => saved.has(f.followup_id));\nif (rows.length === 0) return [];\nconst link = s.baseUrl + '/webhook/approvals';\nconst esc = v => String(v ?? '').replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst label = k => k === 'reconnect' ? 'Win back (no recent orders)' : 'New prospect';\nconst list = rows.map(r => '- ' + r.company + ' (' + label(r.kind) + ', rep: ' + r.sales_rep + ')').join('\\n');\nconst text = [\n  'Good morning,', '',\n  rows.length + ' follow-up email(s) are drafted and waiting for your approval. Nothing has been sent.', '',\n  list, '',\n  'Review, edit, approve or reject them here: ' + link,\n].join('\\n');\nconst html = '<p>Good morning,</p><p><b>' + rows.length + ' follow-up email(s)</b> are drafted and waiting for your approval. Nothing has been sent.</p><ul>'\n  + rows.map(r => '<li><b>' + esc(r.company) + '</b> - ' + esc(label(r.kind)) + ', rep: ' + esc(r.sales_rep) + '</li>').join('')\n  + '</ul><p><a href=\"' + esc(link) + '\" style=\"background:#1f6f43;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none\">Open the approval queue</a></p>';\nreturn [{ json: { to: s.managerEmail, subject: rows.length + ' sales follow-up(s) waiting for your approval', text, html, count: rows.length } }];\n"
+      }
+    },
+    {
+      "id": "b40920dc-2d44-5e7e-b28e-04cf6b67ff8e",
+      "name": "Email the sales manager",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2200,
+        -100
+      ],
+      "parameters": {
+        "fromEmail": "={{ $('Settings').first().json.fromEmail }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "options": {
+          "appendAttribution": false
+        },
+        "emailFormat": "both",
+        "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}"
+      },
+      "credentials": {
+        "smtp": {
+          "id": "smtpDemoMail0001",
+          "name": "Demo mailbox (Mailpit SMTP)"
+        }
+      }
+    },
+    {
+      "id": "5feb1fb3-bac0-5b09-95dc-d655dbf47620",
+      "name": "Describe the AI failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const req = $('Build AI request').item.json;\nconst e = $json.error;\nconst msg = (e && (e.message || e.description)) || (typeof e === 'string' ? e : JSON.stringify($json).slice(0, 300));\nreturn { json: { followup_id: req.followup_id, company: req.company, error: 'AI draft failed: ' + msg } };\n",
+        "mode": "runOnceForEachItem"
+      }
+    },
+    {
+      "id": "7c760ba3-d8ae-555a-b76a-121fbf260d15",
+      "name": "Mark draft failed (retried tomorrow)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM mark_draft_failed($1, $2);",
+        "options": {
+          "queryReplacement": "={{ [ $json.followup_id, $json.error ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "pgSalesDb0000001",
+          "name": "Sales database (Postgres)"
+        }
+      }
+    },
+    {
+      "id": "4864cb2b-525d-5eac-88b0-4b81aae7725d",
+      "name": "Email an alert naming the account",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "fromEmail": "={{ $('Settings').first().json.fromEmail }}",
+        "toEmail": "={{ $('Settings').first().json.alertEmail }}",
+        "subject": "=[ALERT] Could not draft the follow-up for {{ $('Describe the AI failure').item.json.company }}",
+        "options": {
+          "appendAttribution": false
+        },
+        "emailFormat": "text",
+        "text": "=The AI step failed for {{ $('Describe the AI failure').item.json.company }} (follow-up #{{ $('Describe the AI failure').item.json.followup_id }}).\n\nError: {{ $('Describe the AI failure').item.json.error }}\n\nNothing was sent. The draft is marked as failed and will be retried on the next daily run.\nIf the error mentions an API key (401/403), update LLM_API_KEY and restart n8n."
+      },
+      "credentials": {
+        "smtp": {
+          "id": "smtpDemoMail0001",
+          "name": "Demo mailbox (Mailpit SMTP)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every weekday at 8:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now (demo button)": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Find quiet customers and new prospects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find quiet customers and new prospects": {
+      "main": [
+        [
+          {
+            "node": "Anyone new to contact?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anyone new to contact?": {
+      "main": [
+        [
+          {
+            "node": "Use AI or the offline template?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing new today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use AI or the offline template?": {
+      "main": [
+        [
+          {
+            "node": "Draft email (OFFLINE TEMPLATE, no AI)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build AI request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft email (OFFLINE TEMPLATE, no AI)": {
+      "main": [
+        [
+          {
+            "node": "Save draft for approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI request": {
+      "main": [
+        [
+          {
+            "node": "Ask the AI to draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask the AI to draft": {
+      "main": [
+        [
+          {
+            "node": "Read the AI reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Describe the AI failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the AI reply": {
+      "main": [
+        [
+          {
+            "node": "Save draft for approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Describe the AI failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save draft for approval": {
+      "main": [
+        [
+          {
+            "node": "Write the morning summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the morning summary": {
+      "main": [
+        [
+          {
+            "node": "Email the sales manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Describe the AI failure": {
+      "main": [
+        [
+          {
+            "node": "Mark draft failed (retried tomorrow)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark draft failed (retried tomorrow)": {
+      "main": [
+        [
+          {
+            "node": "Email an alert naming the account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "errorWorkflow": "wfErrorAlert0001"
+  },
+  "pinData": {},
+  "versionId": "a0aa62ce-bcd3-5b85-9415-abadb89be54e",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

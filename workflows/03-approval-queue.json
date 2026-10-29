@@ -1,0 +1,927 @@
+{
+  "id": "wfApprovalQueue1",
+  "name": "Sales follow-up: approval queue",
+  "active": true,
+  "nodes": [
+    {
+      "id": "c45d10b9-826f-545d-b026-165da9e2b6c6",
+      "name": "Note: page",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -330
+      ],
+      "parameters": {
+        "content": "## The approval page\nOpen **/webhook/approvals**. Every draft shows who it goes to and the full text.\nThe person can edit the subject and body, then **Approve & send** or **Reject**.",
+        "height": 200,
+        "width": 900,
+        "color": 7
+      }
+    },
+    {
+      "id": "62fff722-e72d-5209-a172-8c77bdce9218",
+      "name": "Note: decision",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        330
+      ],
+      "parameters": {
+        "content": "## Only approved emails are sent\nA draft moves only if it is still waiting and the link token matches, so a double click never sends twice.\nA bad address or a mail server error marks the follow-up as failed and emails an alert naming the account.",
+        "height": 200,
+        "width": 1500,
+        "color": 5
+      }
+    },
+    {
+      "id": "4754c7fe-abb5-5038-9a8f-2254fab63168",
+      "name": "Open the approval page",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "approvals",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "58cc728e-63f0-58c5-805a-bdf280ee8966"
+    },
+    {
+      "id": "36d57c0b-b976-54b3-a25c-a67981b75054",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "065f00b0-6e61-56a2-98f4-3232a66aae15",
+              "name": "companyName",
+              "value": "={{ $env.COMPANY_NAME || 'Cedar Ridge Supply Co.' }}",
+              "type": "string"
+            },
+            {
+              "id": "494114c0-af7b-51fc-92f6-67b3a00f6cc5",
+              "name": "fromEmail",
+              "value": "={{ $env.SALES_FROM_EMAIL || 'sales@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "b58c5ca4-a80f-588e-b6ee-ae04bd1c0a99",
+              "name": "managerEmail",
+              "value": "={{ $env.SALES_MANAGER_EMAIL || 'manager@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "3389688f-7ada-59e7-bd3e-1c1982a18fd9",
+              "name": "alertEmail",
+              "value": "={{ $env.ALERT_EMAIL || 'alerts@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "ad1a5b21-aeb3-5647-a263-32b2dd130d5b",
+              "name": "baseUrl",
+              "value": "={{ ($env.N8N_WEBHOOK_URL || $env.WEBHOOK_URL || 'http://localhost:5678/').replace(/\\/+$/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "a28b3f7e-a49c-570b-bb31-3b9c700ecb12",
+              "name": "mailProvider",
+              "value": "={{ ($env.MAIL_PROVIDER || 'smtp').toLowerCase() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "f230c923-a92a-5f75-8ea2-d40d57c4afcf",
+      "name": "Load drafts waiting for approval",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM approval_queue;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "pgSalesDb0000001",
+          "name": "Sales database (Postgres)"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5bdcfe45-b32f-5a84-a510-c4943bd5a656",
+      "name": "Build the approval page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const s = $('Settings').first().json;\nconst css = \".wrap{max-width:860px;margin:24px auto;font-family:Segoe UI,Arial,sans-serif;color:#1d2a22;padding:0 16px}h1{font-size:24px;margin:0 0 4px}.sub{color:#5b6b61;margin:0 0 20px}.card{border:1px solid #d5ddd8;border-radius:10px;padding:16px;margin:0 0 16px;background:#fff}.meta{font-size:13px;color:#5b6b61;margin-bottom:8px}.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:#e8f1ec;color:#1f6f43;margin-right:6px}.tag.p{background:#eef0fb;color:#3a46a0}label{font-size:13px;font-weight:600;display:block;margin:8px 0 4px}input[type=text],textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:8px;border:1px solid #c4cec8;border-radius:6px}textarea{min-height:270px}.warn{background:#fff4e0;color:#7a4b00;border-radius:6px;padding:8px 10px;font-size:13px;margin:6px 0}.btns{margin-top:10px;display:flex;gap:8px}button{font:inherit;font-size:14px;padding:8px 16px;border-radius:6px;border:0;cursor:pointer}.ok{background:#1f6f43;color:#fff}.no{background:#f3e4e4;color:#8a1f1f}.empty{padding:24px;border:1px dashed #c4cec8;border-radius:10px;color:#5b6b61}.msg{padding:16px;border-radius:10px;margin:0 0 16px}.msg.good{background:#e8f1ec}.msg.bad{background:#fbeaea}body{background:#f6f8f7;margin:0}\";\nconst esc = v => String(v ?? '').replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst validEmail = e => /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(String(e || ''));\n// drafts with a valid address first; a bad address is flagged (it will be refused at send time)\nconst rows = $input.all().map(i => i.json).filter(r => r.id)\n  .sort((a, b) => Number(validEmail(b.email)) - Number(validEmail(a.email)));\nconst action = s.baseUrl + '/webhook/decision';\nconst cards = rows.map(r => `\n<div class=\"card\">\n  <div class=\"meta\"><span class=\"tag ${r.kind === 'intro' ? 'p' : ''}\">${r.kind === 'intro' ? 'New prospect' : 'Win back'}</span>\n    To <b>${esc(r.contact_name)}</b> &lt;${esc(r.email)}&gt; at <b>${esc(r.company)}</b> &middot; rep: ${esc(r.sales_rep)} &middot; drafted by: ${esc(r.drafted_by)}</div>\n  ${validEmail(r.email) ? '' : '<div class=\"warn\">This email address looks wrong. If you approve, it will NOT be sent: it is marked as failed and an alert is emailed. Fix the address in the customer list first.</div>'}\n  <form method=\"post\" action=\"${esc(action)}\">\n    <input type=\"hidden\" name=\"id\" value=\"${r.id}\">\n    <input type=\"hidden\" name=\"token\" value=\"${esc(r.approval_token)}\">\n    <label>Subject</label><input type=\"text\" name=\"subject\" value=\"${esc(r.subject)}\">\n    <label>Message</label><textarea name=\"body\">${esc(r.body)}</textarea>\n    <div class=\"btns\"><button class=\"ok\" name=\"decision\" value=\"approve\">Approve &amp; send</button>\n    <button class=\"no\" name=\"decision\" value=\"reject\">Reject</button></div>\n  </form>\n</div>`).join('');\nconst body = rows.length ? cards : '<div class=\"empty\">Nothing is waiting for approval. New drafts appear here after the daily run.</div>';\nconst html = `<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>Follow-ups waiting for approval</title><style>${css}</style></head><body><div class=\"wrap\">\n<h1>Follow-ups waiting for approval</h1>\n<p class=\"sub\">${esc(s.companyName)} &middot; ${rows.length} draft(s). Nothing is sent until you press <b>Approve &amp; send</b>. You can edit the text first.</p>\n${body}</div></body></html>`;\nreturn [{ json: { html } }];\n"
+      }
+    },
+    {
+      "id": "8c5e4ef8-a59b-5d86-8dcd-67692c16ae4d",
+      "name": "Show the approval page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "38829500-51b5-5282-8fed-faec022d02df",
+      "name": "Approve or reject (form post)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        750
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "decision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "ed22597e-213b-58fb-a302-0a9aec2ba30d"
+    },
+    {
+      "id": "63a3ec21-8a99-5273-8e04-944bdc45f9bb",
+      "name": "Settings for decision",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        750
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "065f00b0-6e61-56a2-98f4-3232a66aae15",
+              "name": "companyName",
+              "value": "={{ $env.COMPANY_NAME || 'Cedar Ridge Supply Co.' }}",
+              "type": "string"
+            },
+            {
+              "id": "494114c0-af7b-51fc-92f6-67b3a00f6cc5",
+              "name": "fromEmail",
+              "value": "={{ $env.SALES_FROM_EMAIL || 'sales@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "b58c5ca4-a80f-588e-b6ee-ae04bd1c0a99",
+              "name": "managerEmail",
+              "value": "={{ $env.SALES_MANAGER_EMAIL || 'manager@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "3389688f-7ada-59e7-bd3e-1c1982a18fd9",
+              "name": "alertEmail",
+              "value": "={{ $env.ALERT_EMAIL || 'alerts@cedarridge-supply.example' }}",
+              "type": "string"
+            },
+            {
+              "id": "ad1a5b21-aeb3-5647-a263-32b2dd130d5b",
+              "name": "baseUrl",
+              "value": "={{ ($env.N8N_WEBHOOK_URL || $env.WEBHOOK_URL || 'http://localhost:5678/').replace(/\\/+$/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "a28b3f7e-a49c-570b-bb31-3b9c700ecb12",
+              "name": "mailProvider",
+              "value": "={{ ($env.MAIL_PROVIDER || 'smtp').toLowerCase() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "91383e8e-86d9-568f-a297-99873a103a7c",
+      "name": "Record the decision",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        750
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM decide_followup($1::int, $2, $3, $4, $5, $6);",
+        "options": {
+          "queryReplacement": "={{ [ Number($json.body.id) || 0, String($json.body.token || ''), String($json.body.decision || ''), $json.body.subject ?? '', $json.body.body ?? '', 'approval page' ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "pgSalesDb0000001",
+          "name": "Sales database (Postgres)"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bc8924e0-f112-5df3-93dd-3e89ba0b9ff4",
+      "name": "Still waiting? (not already handled)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        750
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "de22795f-51fa-5f8f-bacc-bfbd6dbded71",
+              "leftValue": "={{ $json.followup_id }}",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "295ae0ea-24b7-5f59-9c15-37c0f7713bdf",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        650
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f09f5c20-91b8-5c64-98aa-8a6763637e61",
+              "leftValue": "={{ $json.decision }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "approve"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "4640b8b0-5fe9-5d78-8796-125a81261343",
+      "name": "Email address looks valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        550
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7606c01b-5c9e-5639-9c49-60cce7ba62d6",
+              "leftValue": "={{ $json.email }}",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              },
+              "rightValue": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "687e990a-94f5-5759-b028-bd76d247373a",
+      "name": "Send through Outlook?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        450
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1d738ac1-182f-53c5-bc4f-caca4cde1134",
+              "leftValue": "={{ $('Settings for decision').first().json.mailProvider }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "outlook"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "9d731a85-7e37-5027-bdb8-68eedbb1bb0b",
+      "name": "Send via Outlook (Microsoft Graph)",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        350
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "toRecipients": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "bodyContent": "={{ $json.body }}",
+        "additionalFields": {
+          "bodyContentType": "Text"
+        }
+      },
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "outlookNotConn01",
+          "name": "Microsoft Outlook (NOT connected in the demo)"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "e4438704-2e22-50b4-b393-045b0f417fe9",
+      "name": "Send via SMTP (demo: Mailpit)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1540,
+        550
+      ],
+      "parameters": {
+        "fromEmail": "={{ $('Settings for decision').first().json.fromEmail }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "options": {
+          "appendAttribution": false
+        },
+        "emailFormat": "text",
+        "text": "={{ $json.body }}"
+      },
+      "credentials": {
+        "smtp": {
+          "id": "smtpDemoMail0001",
+          "name": "Demo mailbox (Mailpit SMTP)"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "2b4684f1-2bde-57dc-b266-2f6536570463",
+      "name": "Mark as sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        450
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM mark_sent($1, $2);",
+        "options": {
+          "queryReplacement": "={{ [ $('Record the decision').item.json.followup_id, $('Settings for decision').first().json.mailProvider ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "pgSalesDb0000001",
+          "name": "Sales database (Postgres)"
+        }
+      }
+    },
+    {
+      "id": "41d8051e-f110-59ce-b29d-5ba3f28f9bac",
+      "name": "Page: sent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        450
+      ],
+      "parameters": {
+        "jsCode": "const d = $('Record the decision').first().json;\nreturn [{ json: { ok: true, title: 'Sent', text: 'The email to ' + d.contact_name + ' at ' + d.company + ' was sent and logged.' } }];\n"
+      }
+    },
+    {
+      "id": "b4e0afb4-ac55-5467-a245-32ffdbc1aa85",
+      "name": "Describe the send failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        700
+      ],
+      "parameters": {
+        "jsCode": "const d = $('Record the decision').first().json;\nconst e = $json.error;\nconst reason = e ? (e.message || e.description || JSON.stringify(e)) : 'The email address \"' + d.email + '\" does not look valid';\nreturn [{ json: { followup_id: d.followup_id, company: d.company, email: d.email, reason } }];\n"
+      }
+    },
+    {
+      "id": "5822476e-e721-55a5-9455-83081c8320fc",
+      "name": "Mark as failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1980,
+        700
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM mark_send_failed($1, $2);",
+        "options": {
+          "queryReplacement": "={{ [ $json.followup_id, $json.reason ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "pgSalesDb0000001",
+          "name": "Sales database (Postgres)"
+        }
+      }
+    },
+    {
+      "id": "a708b63b-2654-5811-bb05-8740ff253512",
+      "name": "Email an alert naming the account",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2200,
+        700
+      ],
+      "parameters": {
+        "fromEmail": "={{ $('Settings for decision').first().json.fromEmail }}",
+        "toEmail": "={{ $('Settings for decision').first().json.alertEmail }}",
+        "subject": "=[ALERT] Follow-up to {{ $('Describe the send failure').first().json.company }} was NOT sent",
+        "options": {
+          "appendAttribution": false
+        },
+        "emailFormat": "text",
+        "text": "=The approved follow-up to {{ $('Describe the send failure').first().json.company }} <{{ $('Describe the send failure').first().json.email }}> could not be sent.\n\nReason: {{ $('Describe the send failure').first().json.reason }}\n\nIt is marked as send_failed in the followups table (#{{ $('Describe the send failure').first().json.followup_id }}). Fix the address or the mail connection, then contact the customer or re-queue the follow-up."
+      },
+      "credentials": {
+        "smtp": {
+          "id": "smtpDemoMail0001",
+          "name": "Demo mailbox (Mailpit SMTP)"
+        }
+      }
+    },
+    {
+      "id": "eba8f469-3454-5643-808e-f29dfd4fbf42",
+      "name": "Page: not sent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        700
+      ],
+      "parameters": {
+        "jsCode": "const f = $('Describe the send failure').first().json;\nreturn [{ json: { ok: false, title: 'Not sent', text: 'The email to ' + f.company + ' was NOT sent: ' + f.reason + '. An alert email was sent and the follow-up is marked as failed.' } }];\n"
+      }
+    },
+    {
+      "id": "b9560327-56a5-5e8d-8e57-85855c776392",
+      "name": "Page: rejected",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        850
+      ],
+      "parameters": {
+        "jsCode": "const d = $('Record the decision').first().json;\nreturn [{ json: { ok: true, title: 'Rejected', text: 'The draft for ' + d.company + ' was rejected. It will not be sent, and this account will not get another follow-up until it orders again.' } }];\n"
+      }
+    },
+    {
+      "id": "ae1087b9-e1b9-55b5-bb99-aebef829c7fa",
+      "name": "Page: already handled",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1000
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: { ok: false, title: 'Already handled', text: 'This draft was already approved or rejected (or the link is not valid). Nothing was sent again.' } }];\n"
+      }
+    },
+    {
+      "id": "20ab53eb-3b8c-5bd4-a252-af5823e053be",
+      "name": "Build the result page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        850
+      ],
+      "parameters": {
+        "jsCode": "const s = $('Settings for decision').first().json;\nconst css = \".wrap{max-width:860px;margin:24px auto;font-family:Segoe UI,Arial,sans-serif;color:#1d2a22;padding:0 16px}h1{font-size:24px;margin:0 0 4px}.sub{color:#5b6b61;margin:0 0 20px}.card{border:1px solid #d5ddd8;border-radius:10px;padding:16px;margin:0 0 16px;background:#fff}.meta{font-size:13px;color:#5b6b61;margin-bottom:8px}.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:#e8f1ec;color:#1f6f43;margin-right:6px}.tag.p{background:#eef0fb;color:#3a46a0}label{font-size:13px;font-weight:600;display:block;margin:8px 0 4px}input[type=text],textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:8px;border:1px solid #c4cec8;border-radius:6px}textarea{min-height:270px}.warn{background:#fff4e0;color:#7a4b00;border-radius:6px;padding:8px 10px;font-size:13px;margin:6px 0}.btns{margin-top:10px;display:flex;gap:8px}button{font:inherit;font-size:14px;padding:8px 16px;border-radius:6px;border:0;cursor:pointer}.ok{background:#1f6f43;color:#fff}.no{background:#f3e4e4;color:#8a1f1f}.empty{padding:24px;border:1px dashed #c4cec8;border-radius:10px;color:#5b6b61}.msg{padding:16px;border-radius:10px;margin:0 0 16px}.msg.good{background:#e8f1ec}.msg.bad{background:#fbeaea}body{background:#f6f8f7;margin:0}\";\nconst r = $json;\nconst esc = v => String(v ?? '').replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst html = `<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>${esc(r.title)}</title><style>${css}</style></head><body><div class=\"wrap\">\n<h1>${esc(r.title)}</h1><div class=\"msg ${r.ok ? 'good' : 'bad'}\">${esc(r.text)}</div>\n<p><a href=\"${esc(s.baseUrl)}/webhook/approvals\">Back to the approval queue</a></p></div></body></html>`;\nreturn [{ json: { html, result: r.title } }];\n"
+      }
+    },
+    {
+      "id": "25d5757d-af43-5b29-852c-ad7755270b4b",
+      "name": "Show the result page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2860,
+        850
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Open the approval page": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Load drafts waiting for approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load drafts waiting for approval": {
+      "main": [
+        [
+          {
+            "node": "Build the approval page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the approval page": {
+      "main": [
+        [
+          {
+            "node": "Show the approval page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve or reject (form post)": {
+      "main": [
+        [
+          {
+            "node": "Settings for decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings for decision": {
+      "main": [
+        [
+          {
+            "node": "Record the decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the decision": {
+      "main": [
+        [
+          {
+            "node": "Still waiting? (not already handled)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still waiting? (not already handled)": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Page: already handled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Email address looks valid?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Page: rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email address looks valid?": {
+      "main": [
+        [
+          {
+            "node": "Send through Outlook?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Describe the send failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send through Outlook?": {
+      "main": [
+        [
+          {
+            "node": "Send via Outlook (Microsoft Graph)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send via SMTP (demo: Mailpit)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via Outlook (Microsoft Graph)": {
+      "main": [
+        [
+          {
+            "node": "Mark as sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Describe the send failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via SMTP (demo: Mailpit)": {
+      "main": [
+        [
+          {
+            "node": "Mark as sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Describe the send failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as sent": {
+      "main": [
+        [
+          {
+            "node": "Page: sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Page: sent": {
+      "main": [
+        [
+          {
+            "node": "Build the result page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Describe the send failure": {
+      "main": [
+        [
+          {
+            "node": "Mark as failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as failed": {
+      "main": [
+        [
+          {
+            "node": "Email an alert naming the account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email an alert naming the account": {
+      "main": [
+        [
+          {
+            "node": "Page: not sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Page: not sent": {
+      "main": [
+        [
+          {
+            "node": "Build the result page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Page: rejected": {
+      "main": [
+        [
+          {
+            "node": "Build the result page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Page: already handled": {
+      "main": [
+        [
+          {
+            "node": "Build the result page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the result page": {
+      "main": [
+        [
+          {
+            "node": "Show the result page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "errorWorkflow": "wfErrorAlert0001"
+  },
+  "pinData": {},
+  "versionId": "1993d3ad-c10f-5913-afde-8a7d387442d7",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

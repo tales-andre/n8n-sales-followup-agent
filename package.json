@@ -1,0 +1,12 @@
+{
+  "name": "n8n-sales-followup-agent",
+  "private": true,
+  "description": "Screenshot helper for the n8n sales follow-up demo (not needed to run the demo).",
+  "license": "MIT",
+  "scripts": {
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.48.0"
+  }
+}

@@ -1,0 +1,86 @@
+# Demo stack: n8n + Postgres (customer/order data, works the same on Supabase)
+# + Mailpit (a fake mailbox, so nothing real is ever sent).
+# Every value has a demo default, so `docker compose up -d` works without a .env file.
+name: sales-followup
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-sales}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-demo-only-change-me}
+      POSTGRES_DB: ${DB_NAME:-sales}
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${DB_PUBLISH_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:8025:8025"   # web inbox: http://localhost:8025
+
+  n8n:
+    image: n8nio/n8n:2.45.6
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    entrypoint: ["tini", "--", "/bin/sh", "/demo/n8n/start.sh"]
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      # n8n itself
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-demo-only-encryption-key-change-me}
+      N8N_WEBHOOK_URL: ${PUBLIC_URL:-http://localhost:5678/}
+      GENERIC_TIMEZONE: ${TIMEZONE:-America/New_York}
+      TZ: ${TIMEZONE:-America/New_York}
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"   # workflows read the settings below
+      # data + mail connections (turned into n8n credentials at start)
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-sales}
+      DB_USER: ${DB_USER:-sales}
+      DB_PASSWORD: ${DB_PASSWORD:-demo-only-change-me}
+      DB_SSL: ${DB_SSL:-disable}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      # business settings
+      COMPANY_NAME: ${COMPANY_NAME:-Cedar Ridge Supply Co.}
+      SALES_FROM_EMAIL: ${SALES_FROM_EMAIL:-sales@cedarridge-supply.example}
+      SALES_MANAGER_EMAIL: ${SALES_MANAGER_EMAIL:-manager@cedarridge-supply.example}
+      ALERT_EMAIL: ${ALERT_EMAIL:-alerts@cedarridge-supply.example}
+      INACTIVE_DAYS: ${INACTIVE_DAYS:-60}
+      PROSPECTS_PER_DAY: ${PROSPECTS_PER_DAY:-3}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-smtp}
+      # AI writer: "stub" = offline template, no API key needed
+      LLM_PROVIDER: ${LLM_PROVIDER:-stub}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    volumes:
+      - ./workflows:/demo/workflows:ro
+      - ./n8n:/demo/n8n:ro
+      - n8ndata:/home/node/.n8n
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5678/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+
+volumes:
+  pgdata:
+  n8ndata:
