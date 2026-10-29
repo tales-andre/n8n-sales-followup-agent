@@ -30,6 +30,8 @@ You open the approval page (a link in the morning email). For each draft you see
 
 Clicking a button twice, or opening an old link, never sends an email twice: the page answers "Already handled".
 
+**Before real use:** in this demo the approval page has **no password**. Anyone who can open its link can approve or reject drafts. It must be put behind a login or a private network first (see "Limits").
+
 | You approve | It is sent | You reject |
 |---|---|---|
 | ![](docs/approved-sent.png) | ![](docs/mailpit-received-email.png) | nothing is sent, the decision is logged |
@@ -121,13 +123,13 @@ Then open:
 - the fake inbox (summary email, approved emails, alerts): <http://localhost:8025>
 - the n8n editor, to see or change the workflows: <http://localhost:5678> (create a local login on first visit)
 
-On start, the n8n container ([`n8n/start.sh`](n8n/start.sh)) creates the database and SMTP credentials from environment variables, imports `workflows/*.json` with the n8n CLI and publishes them. No `.env` is needed for the demo; copy [`.env.example`](.env.example) to `.env` to change settings. To start over with fresh sample data: `docker compose down -v`.
+On start, the n8n container ([`n8n/start.sh`](n8n/start.sh)) creates the database and SMTP credentials from environment variables, imports `workflows/*.json` with the n8n CLI and publishes them. No `.env` is needed for the demo; copy [`.env.example`](.env.example) to `.env` to change settings. The demo defaults in `docker-compose.yml` (the n8n encryption key, the database password) are public placeholder values (`demo-only-...`) that protect nothing: set your own in `.env` before the first start with real customer data or an API key. To start over with fresh sample data: `docker compose down -v`.
 
 ### How to run the tests
 
 ```bash
 python tests/test_workflows.py      # offline, no Docker: workflow JSON, safety rules, schema
-python tests/test_e2e.py            # against the running stack (about 6-7 minutes)
+python tests/test_e2e.py            # against the running stack (a few minutes)
 python tests/test_e2e.py --quick    # same, without the step that restarts n8n
 ```
 
@@ -211,8 +213,10 @@ Set in `.env` and restart:
 ```bash
 LLM_PROVIDER=anthropic      # or openai (any OpenAI-compatible endpoint) or ollama
 LLM_API_KEY=...             # not needed for ollama
-LLM_MODEL=                  # anthropic defaults to claude-opus-5; required for openai/ollama
+LLM_MODEL=                  # anthropic defaults to claude-sonnet-5; required for openai/ollama
 ```
+
+Use a model id that your provider currently lists (Anthropic's models page, your OpenAI-compatible provider's model list, or `ollama list`). Model ids get retired over time; if the id is wrong, every draft fails, you get one alert per account, and the next run retries.
 
 The prompt (in the "Build AI request" node) asks for under 120 words, signed by the rep, and forbids invented prices, discounts or facts. The drafts still go to the approval page; nothing changes for the person approving.
 
