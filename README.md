@@ -1,6 +1,6 @@
 # n8n sales follow-up assistant (with human approval)
 
-> "Automate customer follow-ups, reconnect with inactive accounts, identify new wholesale prospects", without an expensive CRM, and without anything that breaks silently and loses leads.
+**A common request on freelance job boards:** automate customer follow-ups, reconnect with inactive accounts and find new wholesale prospects, without an expensive CRM and without anything that breaks silently and loses leads.
 
 **Open-source demo.** Everything runs on your own computer with Docker. The customers, orders and company in it are fictional ("Cedar Ridge Supply Co."), and no real email is ever sent: the demo delivers to a fake inbox (Mailpit) that you can open in the browser.
 
